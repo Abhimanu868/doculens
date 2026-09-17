@@ -1,0 +1,113 @@
+/* ── DocuLens — Homepage Styles ───────────────────────────── */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 0 1.5rem;
+}
+
+/* ── Header ─────────────────────────────────────────────── */
+
+.header {
+  text-align: center;
+  padding: 6rem 0 3rem;
+}
+
+.title {
+  font-size: 2.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+}
+
+.logo {
+  font-size: 1.1em;
+}
+
+.subtitle {
+  margin-top: 0.75rem;
+  font-size: 1.1rem;
+  color: var(--fg-muted);
+}
+
+/* ── Main ───────────────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  width: 100%;
+  max-width: 560px;
+}
+
+.card {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius);
+  padding: 2.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+  transition: box-shadow 0.3s ease;
+}
+
+.card:hover {
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.3),
+    0 0 0 1px var(--accent-glow);
+}
+
+.card h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.description {
+  color: var(--fg-muted);
+  line-height: 1.6;
+  margin-bottom: 1.5rem;
+}
+
+/* ── Status Indicator ───────────────────────────────────── */
+
+.status {
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 0.95rem;
+}
+
+.loading {
+  color: var(--fg-muted);
+}
+
+.ok {
+  color: var(--success);
+}
+
+.error {
+  color: var(--error);
+}
+
+/* ── Footer ─────────────────────────────────────────────── */
+
+.footer {
+  padding: 2rem 0;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .title {
+    font-size: 2rem;
+  }
+
+  .card {
+    padding: 1.75rem;
+  }
+}

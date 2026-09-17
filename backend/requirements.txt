@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+torch
+transformers
+datasets
+sentence-transformers
+spacy
+pymupdf
+faiss-cpu
+sqlalchemy
+psycopg2-binary
+python-multipart
+pydantic
