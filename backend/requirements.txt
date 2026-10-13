@@ -11,3 +11,6 @@ sqlalchemy
 psycopg2-binary
 python-multipart
 pydantic
+huggingface_hub
+numpy
+pandas

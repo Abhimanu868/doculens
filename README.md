@@ -36,7 +36,12 @@ domain expertise. Traditional keyword search misses context and nuance.
                     └──────────────┘
 ```
 
+## Model
+
+The NLI model was fine-tuned on Google Colab (GPU) and is hosted on Hugging Face Hub at `Abhimanyu125047/doculens-nli` (configured via `HF_MODEL_ID`, e.g., `YOUR_USERNAME/doculens-nli`); the application loads it directly via the transformers library — no local training is required to run the app.
+
 ## Setup
+
 
 ### Prerequisites
 
