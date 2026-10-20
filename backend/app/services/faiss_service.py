@@ -134,34 +134,34 @@ class FAISSService:
         if norm > 0:
             qvec = qvec / norm
 
-        # Over-fetch when filtering to ensure we get enough results
-        fetch_k = top_k * 4 if doc_id_filter else top_k
-        fetch_k = min(fetch_k, self.total_vectors)
+        # Avoid FAISS's OpenMP search runtime, which conflicts with PyTorch's on macOS.
+        ids = faiss.vector_to_array(self._index.id_map)
+        flat_index = faiss.downcast_index(self._index.index)
+        vectors = np.stack(
+            [flat_index.reconstruct(position) for position in range(self.total_vectors)]
+        )
+        scores = vectors @ qvec[0]
 
-        scores, ids = self._index.search(qvec, fetch_k)
-
-        results: List[Dict[str, Any]] = []
-        for score, fid in zip(scores[0], ids[0]):
-            if fid == -1:
-                continue
+        ranked_results: List[Tuple[float, Dict[str, Any]]] = []
+        for position, fid in enumerate(ids):
             meta = self._metadata.get(int(fid))
-            if meta is None:
+            if meta is None or (doc_id_filter and meta["doc_id"] != doc_id_filter):
                 continue
-            if doc_id_filter and meta["doc_id"] != doc_id_filter:
-                continue
-            results.append(
-                {
-                    "faiss_id": int(fid),
-                    "doc_id": meta["doc_id"],
-                    "chunk_index": meta["chunk_index"],
-                    "text": meta["text"],
-                    "score": round(float(score), 4),
-                }
+            ranked_results.append(
+                (
+                    float(scores[position]),
+                    {
+                        "faiss_id": int(fid),
+                        "doc_id": meta["doc_id"],
+                        "chunk_index": meta["chunk_index"],
+                        "text": meta["text"],
+                        "score": round(float(scores[position]), 4),
+                    },
+                )
             )
-            if len(results) >= top_k:
-                break
 
-        return results
+        ranked_results.sort(key=lambda result: result[0], reverse=True)
+        return [result for _, result in ranked_results[:top_k]]
 
     def remove_document(self, doc_id: str) -> int:
         """Remove all chunks belonging to a document from the index.

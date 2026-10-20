@@ -3,7 +3,7 @@
 import logging
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from ..services.embedding_service import EmbeddingService
@@ -12,15 +12,6 @@ from ..services.faiss_service import get_faiss_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["search"])
-
-_embedding_service: Optional[EmbeddingService] = None
-
-
-def _get_embedding_service() -> EmbeddingService:
-    global _embedding_service
-    if _embedding_service is None:
-        _embedding_service = EmbeddingService()
-    return _embedding_service
 
 
 class SearchRequest(BaseModel):
@@ -44,14 +35,17 @@ class SearchResponse(BaseModel):
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search_documents(request: SearchRequest):
+async def search_documents(request: SearchRequest, http_request: Request):
     """Search indexed documents using semantic similarity.
 
     Embeds the query, searches the FAISS index, and returns the most similar
     document chunks ranked by cosine similarity score.
     """
     try:
-        emb_service = _get_embedding_service()
+        emb_service = getattr(http_request.app.state, "embedding_service", None)
+        if emb_service is None:
+            emb_service = EmbeddingService()
+            http_request.app.state.embedding_service = emb_service
         query_embedding = emb_service.embed([request.query])[0]
 
         faiss_svc = get_faiss_service(dimension=emb_service.embedding_dimension)

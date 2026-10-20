@@ -167,7 +167,7 @@ export default function Home() {
             <strong>DocuLens</strong> — Intelligent Document Analysis &amp; NLI Verification Platform
           </div>
           <div style={{ display: "flex", gap: "16px" }}>
-            <span>FastAPI Backend (port 8000)</span>
+            <span>FastAPI Backend ({new URL(API_URL).host})</span>
             <span>•</span>
             <span>Next.js Frontend (port 3000)</span>
             <span>•</span>
