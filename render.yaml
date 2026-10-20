@@ -2,8 +2,8 @@ services:
   - type: web
     name: doculens-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile
-    dockerContext: ./backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
     plan: 1c-2g
     healthCheckPath: /health
     autoDeployTrigger: commit
