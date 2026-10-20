@@ -17,3 +17,22 @@ def test_loaded_index_can_search(tmp_path):
     assert len(results) == 1
     assert results[0]["text"] == "matching chunk"
     assert results[0]["score"] == 1.0
+
+
+def test_removing_document_preserves_remaining_searchable_vectors(tmp_path):
+    service = FAISSService(dimension=3, index_dir=tmp_path)
+    service.add_document(
+        "remove-me",
+        ["remove this chunk"],
+        np.array([[1.0, 0.0, 0.0]], dtype=np.float32),
+    )
+    service.add_document(
+        "keep-me",
+        ["keep this chunk"],
+        np.array([[0.0, 1.0, 0.0]], dtype=np.float32),
+    )
+
+    assert service.remove_document("remove-me") == 1
+    results = service.search(np.array([0.0, 1.0, 0.0]), top_k=5)
+
+    assert [result["doc_id"] for result in results] == ["keep-me"]

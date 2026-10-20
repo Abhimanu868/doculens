@@ -1,8 +1,6 @@
 fastapi
 uvicorn[standard]
-torch
 transformers
-datasets
 sentence-transformers
 spacy
 pymupdf
@@ -13,4 +11,3 @@ python-multipart
 pydantic
 huggingface_hub
 numpy
-pandas

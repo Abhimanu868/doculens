@@ -6,8 +6,8 @@ from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
-from ..services.embedding_service import EmbeddingService
 from ..services.faiss_service import get_faiss_service
+from ..utils.config import RETRIEVAL_TOP_K
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api", tags=["search"])
 class SearchRequest(BaseModel):
     """Request body for semantic search."""
     query: str = Field(..., min_length=1, description="Natural-language search query.")
-    top_k: int = Field(default=10, ge=1, le=50, description="Number of results to return.")
+    top_k: int = Field(default=RETRIEVAL_TOP_K, ge=1, le=50, description="Number of results to return.")
     doc_id: Optional[str] = Field(default=None, description="Restrict search to a specific document.")
 
 
@@ -35,7 +35,7 @@ class SearchResponse(BaseModel):
 
 
 @router.post("/search", response_model=SearchResponse)
-async def search_documents(request: SearchRequest, http_request: Request):
+def search_documents(request: SearchRequest, http_request: Request):
     """Search indexed documents using semantic similarity.
 
     Embeds the query, searches the FAISS index, and returns the most similar
@@ -44,8 +44,7 @@ async def search_documents(request: SearchRequest, http_request: Request):
     try:
         emb_service = getattr(http_request.app.state, "embedding_service", None)
         if emb_service is None:
-            emb_service = EmbeddingService()
-            http_request.app.state.embedding_service = emb_service
+            raise HTTPException(status_code=503, detail="Embedding model is not ready.")
         query_embedding = emb_service.embed([request.query])[0]
 
         faiss_svc = get_faiss_service(dimension=emb_service.embedding_dimension)
@@ -69,6 +68,8 @@ async def search_documents(request: SearchRequest, http_request: Request):
             total=len(results),
         )
 
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception("Search failed for query: %s", request.query)
         raise HTTPException(status_code=500, detail=f"Search failed: {exc}") from exc

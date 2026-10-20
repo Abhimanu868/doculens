@@ -1,4 +1,3 @@
-import asyncio
 from types import SimpleNamespace
 
 from backend.app.api.search import SearchRequest, search_documents
@@ -37,9 +36,7 @@ def test_search_reuses_startup_embedding_service(monkeypatch):
         lambda dimension: faiss_service,
     )
 
-    response = asyncio.run(
-        search_documents(SearchRequest(query="payment terms"), http_request)
-    )
+    response = search_documents(SearchRequest(query="payment terms"), http_request)
 
     assert embedding_service.texts == ["payment terms"]
     assert response.total == 1

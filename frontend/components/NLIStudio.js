@@ -54,6 +54,8 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
     e?.preventDefault();
     if (!premise.trim() || !hypothesis.trim()) return;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
     setAnalyzing(true);
     setError(null);
 
@@ -61,6 +63,7 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
       const res = await fetch(`${apiUrl}/api/analyze`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           premise: premise.trim(),
           hypothesis: hypothesis.trim()
@@ -85,8 +88,11 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
         ...prev.slice(0, 7) // keep last 8
       ]);
     } catch (err) {
-      setError(err.message || "Failed to run NLI inference");
+      setError(err?.name === "AbortError"
+        ? "Analysis timed out after 3 minutes. Please retry with shorter text."
+        : (err.message || "Failed to run NLI inference"));
     } finally {
+      clearTimeout(timeoutId);
       setAnalyzing(false);
     }
   };
@@ -224,6 +230,12 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
             </button>
           </div>
         </form>
+
+        {analyzing && (
+          <p role="status" style={{ marginTop: "12px", color: "var(--fg-muted)", fontSize: "0.85rem" }}>
+            CPU analysis is running; this may take a minute.
+          </p>
+        )}
 
         {error && (
           <div style={{

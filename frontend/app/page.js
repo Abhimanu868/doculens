@@ -9,7 +9,7 @@ import SemanticSearch from "../components/SemanticSearch";
 import NLIStudio from "../components/NLIStudio";
 import DocumentModal from "../components/DocumentModal";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("documents"); // "documents" | "search" | "nli"
@@ -169,7 +169,7 @@ export default function Home() {
           <div style={{ display: "flex", gap: "16px" }}>
             <span>FastAPI Backend ({new URL(API_URL).host})</span>
             <span>•</span>
-            <span>Next.js Frontend (port 3000)</span>
+            <span>Next.js Frontend</span>
             <span>•</span>
             <span>FAISS + spaCy + PyTorch</span>
           </div>

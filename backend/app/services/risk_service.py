@@ -5,6 +5,8 @@ This is a transparent keyword and confidence heuristic, not a trained model.
 
 from typing import Optional
 
+from ..utils.config import NLI_CONFIDENCE_THRESHOLD
+
 
 CATEGORY_KEYWORDS = {
     "payment": ["payment", "invoice", "fee"],
@@ -20,7 +22,7 @@ def assess_risk(sentence_a: str, sentence_b: str, confidence: float) -> dict:
     """Classify topic and priority using keyword matching and confidence rules.
 
     The category is the first configured category with a keyword in either
-    sentence. Risk is assigned by fixed thresholds; no model is trained or
+    sentence. Risk uses a configurable confidence threshold; no model is trained or
     called by this rule-based prioritization layer.
     """
     combined_text = f"{sentence_a} {sentence_b}".casefold()
@@ -31,7 +33,7 @@ def assess_risk(sentence_a: str, sentence_b: str, confidence: float) -> dict:
             category = candidate
             break
 
-    if category is not None and confidence > 0.85:
+    if category is not None and confidence > NLI_CONFIDENCE_THRESHOLD:
         risk = "HIGH"
     elif category is not None and confidence > 0.6:
         risk = "MEDIUM"

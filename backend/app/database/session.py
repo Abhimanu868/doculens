@@ -1,20 +1,20 @@
 """Database engine and session management for DocuLens."""
 
-import os
-from pathlib import Path
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, declarative_base, sessionmaker
 
-# Default SQLite database for local development.
-# Set DATABASE_URL env var for PostgreSQL in production.
-_DEFAULT_DB_PATH = Path(__file__).resolve().parents[3] / "data" / "doculens.db"
-DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_DEFAULT_DB_PATH}")
+from ..utils.config import DATA_DIR, DATABASE_URL as CONFIGURED_DATABASE_URL
+
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+DATABASE_URL = CONFIGURED_DATABASE_URL or f"sqlite:///{DATA_DIR / 'doculens.db'}"
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 # SQLAlchemy setup
 engine = create_engine(
     DATABASE_URL,
     connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    pool_pre_ping=not DATABASE_URL.startswith("sqlite"),
     echo=False,
 )
 

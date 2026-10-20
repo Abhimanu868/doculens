@@ -10,12 +10,13 @@ from sqlalchemy.orm import Session
 from ..database.models import Document
 from ..database.session import get_db
 from ..services.faiss_service import get_faiss_service
+from ..utils.config import DATA_DIR
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api", tags=["documents"])
 
-_UPLOAD_DIR = Path(__file__).resolve().parents[3] / "data" / "uploads"
+_UPLOAD_DIR = DATA_DIR / "uploads"
 
 
 @router.get("/documents")

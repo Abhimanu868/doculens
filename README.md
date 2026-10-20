@@ -78,6 +78,10 @@ The UI will be available at **http://localhost:3000**.
 docker-compose up --build
 ```
 
+## Deployment
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for the Render Blueprint setup, environment variables, and post-deploy checks.
+
 ## License
 
 MIT

@@ -8,10 +8,12 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import faiss
 import numpy as np
 
+from ..utils.config import DATA_DIR
+
 logger = logging.getLogger(__name__)
 
 # Default persistence directory
-_DEFAULT_INDEX_DIR = Path(__file__).resolve().parents[3] / "data" / "faiss_index"
+_DEFAULT_INDEX_DIR = DATA_DIR / "faiss_index"
 
 
 class FAISSService:
@@ -177,8 +179,22 @@ class FAISSService:
         if not ids_to_remove:
             return 0
 
-        id_array = np.array(ids_to_remove, dtype=np.int64)
-        self._index.remove_ids(id_array)
+        stored_ids = faiss.vector_to_array(self._index.id_map)
+        flat_index = faiss.downcast_index(self._index.index)
+        kept_ids = []
+        kept_vectors = []
+        for position, fid in enumerate(stored_ids):
+            if int(fid) in ids_to_remove:
+                continue
+            kept_ids.append(int(fid))
+            kept_vectors.append(flat_index.reconstruct(position))
+
+        self._index = faiss.IndexIDMap(faiss.IndexFlatIP(self.dimension))
+        if kept_ids:
+            self._index.add_with_ids(
+                np.asarray(kept_vectors, dtype=np.float32),
+                np.asarray(kept_ids, dtype=np.int64),
+            )
 
         for fid in ids_to_remove:
             del self._metadata[fid]

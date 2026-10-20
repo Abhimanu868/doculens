@@ -38,11 +38,13 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
       setError("Only PDF files are currently supported for extraction and indexing.");
       return;
     }
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 180000);
 
     setUploading(true);
     setError(null);
     setSuccessMsg(null);
-    setUploadProgress("Reading and uploading document…");
+    setUploadProgress("Uploading and processing; this may take a minute…");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -52,19 +54,30 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
       const res = await fetch(`${apiUrl}/api/upload`, {
         method: "POST",
         body: formData,
+        signal: controller.signal,
       });
 
-      const data = await res.json();
+      let data = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
+
       if (!res.ok) {
-        throw new Error(data.detail || `Upload failed with status ${res.status}`);
+        throw new Error(data?.detail || `Upload failed with status ${res.status}`);
       }
 
       setSuccessMsg(`Successfully processed "${file.name}" — ${data.num_chunks} text chunks embedded and indexed!`);
       if (fileInputRef.current) fileInputRef.current.value = "";
       if (onUploadSuccess) onUploadSuccess(data);
     } catch (err) {
-      setError(err.message || "Failed to upload document");
+      const message = err?.name === "AbortError"
+        ? "Upload timed out after 3 minutes. Try a smaller PDF or retry when the service is ready."
+        : (err?.message || "Failed to upload document");
+      setError(message);
     } finally {
+      clearTimeout(timeoutId);
       setUploading(false);
       setUploadProgress("");
     }
@@ -127,7 +140,7 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
               Drop your PDF here, or <span style={{ color: "var(--accent-light)", textDecoration: "underline" }}>browse file</span>
             </div>
             <div style={{ fontSize: "0.8rem", color: "var(--fg-muted)", marginTop: "6px" }}>
-              Supports contracts, technical papers, financial disclosures, and policies (.pdf up to 25MB)
+              Supports PDF documents; the server enforces the configured upload size limit.
             </div>
           </div>
         )}

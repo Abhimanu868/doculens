@@ -6,18 +6,14 @@ and performs inference on premise/hypothesis pairs.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from threading import Lock
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
 from huggingface_hub import try_to_load_from_cache
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-try:
-    from ..utils.config import HF_MODEL_ID
-except ImportError:
-    import os
-
-    HF_MODEL_ID = os.getenv("HF_MODEL_ID", "Abhimanyu125047/doculens-nli")
+from ..utils.config import HF_MODEL_ID, HF_TOKEN
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +39,7 @@ class NLIModel:
             return
 
         self.model_id = model_id or HF_MODEL_ID
+        self._inference_lock = Lock()
 
         # Select inference device: CUDA > MPS (Apple Silicon) > CPU
         if torch.cuda.is_available():
@@ -79,8 +76,11 @@ class NLIModel:
         else:
             logger.info("Loading cached model from Hugging Face Hub (%s)...", self.model_id)
 
-        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id)
-        self.model = AutoModelForSequenceClassification.from_pretrained(self.model_id)
+        auth = {"token": HF_TOKEN} if HF_TOKEN else {}
+        self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, **auth)
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            self.model_id, **auth
+        )
         self.model.to(self.device)
         self.model.eval()
 
@@ -119,35 +119,54 @@ class NLIModel:
                 }
             }
         """
-        inputs = self.tokenizer(
-            premise,
-            hypothesis,
-            return_tensors="pt",
-            truncation=True,
-            max_length=512,
-            padding=True,
-        )
-        inputs = {k: v.to(self.device) for k, v in inputs.items()}
+        return self.predict_batch([(premise, hypothesis)])[0]
 
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            logits = outputs.logits
-            probabilities = torch.softmax(logits, dim=-1)[0]
+    def predict_batch(
+        self,
+        pairs: Sequence[Tuple[str, str]],
+        batch_size: int = 16,
+    ) -> List[Dict[str, Any]]:
+        """Run NLI inference in bounded batches to limit peak CPU memory."""
+        if not pairs:
+            return []
+        if batch_size < 1:
+            raise ValueError("batch_size must be greater than zero")
 
-        scores: Dict[str, float] = {}
-        for idx, prob in enumerate(probabilities.tolist()):
-            label_name = self.id2label.get(idx, f"label_{idx}").lower()
-            scores[label_name] = round(float(prob), 4)
+        results: List[Dict[str, Any]] = []
+        with self._inference_lock:
+            for offset in range(0, len(pairs), batch_size):
+                batch = pairs[offset : offset + batch_size]
+                premises, hypotheses = zip(*batch)
+                inputs = self.tokenizer(
+                    list(premises),
+                    list(hypotheses),
+                    return_tensors="pt",
+                    truncation=True,
+                    max_length=512,
+                    padding=True,
+                )
+                inputs = {key: value.to(self.device) for key, value in inputs.items()}
 
-        pred_idx = int(torch.argmax(probabilities).item())
-        pred_label = self.id2label.get(pred_idx, f"label_{pred_idx}").lower()
-        confidence = round(float(probabilities[pred_idx].item()), 4)
+                with torch.inference_mode():
+                    probabilities = torch.softmax(self.model(**inputs).logits, dim=-1)
 
-        return {
-            "label": pred_label,
-            "confidence": confidence,
-            "scores": scores,
-        }
+                for row in probabilities:
+                    scores: Dict[str, float] = {}
+                    for idx, probability in enumerate(row.tolist()):
+                        label_name = self.id2label.get(idx, f"label_{idx}").lower()
+                        scores[label_name] = round(float(probability), 4)
+
+                    pred_idx = int(torch.argmax(row).item())
+                    pred_label = self.id2label.get(pred_idx, f"label_{pred_idx}").lower()
+                    results.append(
+                        {
+                            "label": pred_label,
+                            "confidence": round(float(row[pred_idx].item()), 4),
+                            "scores": scores,
+                        }
+                    )
+
+        return results
 
 
 def get_nli_model(model_id: Optional[str] = None) -> NLIModel:

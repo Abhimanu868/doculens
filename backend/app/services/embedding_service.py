@@ -1,7 +1,10 @@
 from typing import Any, Optional, Sequence, Union
+from threading import Lock
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
+
+from ..utils.config import HF_TOKEN
 
 
 class EmbeddingService:
@@ -23,8 +26,10 @@ class EmbeddingService:
         """
         self.model_name = model_name
         self.device = device
-        self.model = SentenceTransformer(model_name, device=device)
+        auth = {"token": HF_TOKEN} if HF_TOKEN else {}
+        self.model = SentenceTransformer(model_name, device=device, **auth)
         self._dimension = self.model.get_sentence_embedding_dimension()
+        self._inference_lock = Lock()
 
     @property
     def embedding_dimension(self) -> int:
@@ -43,11 +48,12 @@ class EmbeddingService:
         if not sentences:
             return np.empty((0, self._dimension), dtype=np.float32)
 
-        embeddings = self.model.encode(
-            sentences,
-            convert_to_numpy=True,
-            show_progress_bar=False,
-        )
+        with self._inference_lock:
+            embeddings = self.model.encode(
+                sentences,
+                convert_to_numpy=True,
+                show_progress_bar=False,
+            )
         return np.asarray(embeddings, dtype=np.float32)
 
     @staticmethod

@@ -1,23 +1,37 @@
-import re
+import logging
 from typing import Optional
 
 import spacy
 from spacy.language import Language
 
+logger = logging.getLogger(__name__)
+
 _NLP_INSTANCE: Optional[Language] = None
 
 
 def get_spacy_nlp() -> Language:
-    """Get or initialize the cached spaCy language model."""
+    """Get or initialize the cached spaCy language model.
+
+    Tries en_core_web_sm first (better sentence boundaries). If it is not
+    installed, falls back to a blank English pipeline with the rule-based
+    sentencizer, which needs no model download.
+    """
     global _NLP_INSTANCE
     if _NLP_INSTANCE is None:
-        # Disable NER to maximize sentence segmentation throughput
-        _NLP_INSTANCE = spacy.load("en_core_web_sm", disable=["ner"])
-        # Ensure sentence boundaries are set if parser is enabled or sentencizer is added
-        if not _NLP_INSTANCE.has_pipe("parser") and not _NLP_INSTANCE.has_pipe("sentencizer"):
+        try:
+            logger.info("Loading spaCy model: en_core_web_sm")
+            _NLP_INSTANCE = spacy.load("en_core_web_sm", disable=["ner"])
+            if not _NLP_INSTANCE.has_pipe("parser") and not _NLP_INSTANCE.has_pipe("sentencizer"):
+                _NLP_INSTANCE.add_pipe("sentencizer")
+            logger.info("spaCy model loaded successfully")
+        except OSError:
+            logger.warning(
+                "en_core_web_sm not installed; falling back to rule-based sentencizer "
+                "(install later with: python -m spacy download en_core_web_sm)"
+            )
+            _NLP_INSTANCE = spacy.blank("en")
             _NLP_INSTANCE.add_pipe("sentencizer")
     return _NLP_INSTANCE
-
 
 def split_sentences(text: str, min_words: int = 4) -> list[str]:
     """Split text into sentences using spaCy (en_core_web_sm) and filter out short/noisy sentences.
