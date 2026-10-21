@@ -32,4 +32,4 @@ services:
     autoDeployTrigger: commit
     envVars:
       - key: NEXT_PUBLIC_API_URL
-        value: https://doculens-4.onrender.com
+        value: https://doculens-5.onrender.com
