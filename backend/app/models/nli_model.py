@@ -10,8 +10,6 @@ from threading import Lock
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import torch
-from huggingface_hub import try_to_load_from_cache
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 from ..utils.config import HF_MODEL_ID, HF_TOKEN
 
@@ -54,6 +52,9 @@ class NLIModel:
 
     def _load_model(self) -> None:
         """Download (if not cached) and load tokenizer and model from Hugging Face Hub."""
+        from huggingface_hub import try_to_load_from_cache
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
         # Check if model weights are already cached locally
         cached_safetensors = try_to_load_from_cache(
             repo_id=self.model_id, filename="model.safetensors"
