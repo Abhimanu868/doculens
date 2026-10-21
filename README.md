@@ -80,7 +80,7 @@ docker-compose up --build
 
 ## Deployment
 
-See [DEPLOYMENT.md](DEPLOYMENT.md) for the Render Blueprint setup, environment variables, and post-deploy checks.
+The Next.js frontend deploys on Vercel with **Root Directory** `frontend`, **Framework Preset** `Next.js`, and `NEXT_PUBLIC_API_URL` set to the deployed backend URL. The FastAPI backend deploys on Render; set its `CORS_ORIGINS` environment variable to the exact Vercel frontend URL (comma-separated if allowing multiple origins). See [DEPLOYMENT.md](DEPLOYMENT.md) for setup and post-deploy checks.
 
 ## License
 

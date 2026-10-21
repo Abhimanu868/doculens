@@ -22,14 +22,3 @@ services:
         value: "5"
       - key: PYTHONUNBUFFERED
         value: "1"
-
-  - type: web
-    name: doculens-frontend
-    runtime: static
-    rootDir: ./frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: ./out
-    autoDeployTrigger: commit
-    envVars:
-      - key: NEXT_PUBLIC_API_URL
-        value: https://doculens-5.onrender.com
