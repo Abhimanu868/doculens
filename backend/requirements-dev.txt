@@ -1,0 +1,9 @@
+-r requirements.txt
+
+pandas==2.2.3
+datasets==3.3.2
+scikit-learn==1.6.1
+evaluate==0.4.3
+accelerate==1.4.0
+matplotlib==3.10.0
+seaborn==0.13.2
