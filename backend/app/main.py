@@ -66,6 +66,11 @@ app.include_router(search.router)
 app.include_router(documents.router)
 
 
+@app.get("/")
+async def root():
+    return {"service": "DocuLens API", "status": "ok", "docs": "/docs"}
+
+
 @app.get("/health")
 async def health_check():
     """Simple health-check endpoint."""

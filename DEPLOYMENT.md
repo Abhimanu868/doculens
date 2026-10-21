@@ -1,24 +1,31 @@
 # Render Deployment
 
-DocuLens deploys as a FastAPI Docker service and a Next.js Node service. The backend uses one worker and preloads the embedding and NLI models during the Docker build. The Render filesystem is ephemeral: SQLite records, uploaded files, and the FAISS index reset when the backend is redeployed or restarted. This Blueprint does not create PostgreSQL; configure `DATABASE_URL` manually only when a database is provisioned.
+DocuLens deploys as a FastAPI Docker service and a Next.js static site. The frontend is exported to `frontend/out`; it has no API routes, `getServerSideProps`, or server actions. The backend uses one worker and preloads the embedding and NLI models during the Docker build. The Render filesystem is ephemeral: SQLite records, uploaded files, and the FAISS index reset when the backend is redeployed or restarted. This Blueprint does not create PostgreSQL; configure `DATABASE_URL` manually only when a database is provisioned.
 
 ## Deploy with a Blueprint
 
 1. Push the deployment files and source to the GitHub branch Render should deploy.
 2. In the Render Dashboard, choose **New + → Blueprint**, connect the GitHub repository, select the branch, and apply `render.yaml`.
-3. During the initial Blueprint prompt, use these values:
+3. During the initial Blueprint prompt, set the backend environment values:
    - `HF_MODEL_ID`: `Abhimanyu125047/doculens-nli`.
-   - `HF_TOKEN`: leave unset for the public model; set a Hugging Face token only if the model repository is private.
-   - `CORS_ORIGINS`: temporarily set `http://localhost:3000`.
+   - `CORS_ORIGINS`: required; after creating the static site, set it to the exact frontend origin (scheme and host, no trailing slash). Multiple origins can be comma-separated.
+   - `HF_TOKEN`: optional; leave unset for the public model or set a Hugging Face token if the model repository is private.
    - `MAX_UPLOAD_MB`: `10`.
-   - `NEXT_PUBLIC_API_URL`: temporarily set `http://localhost:8000`; it is replaced with the deployed backend URL below.
-   - `NODE_VERSION`: `20`.
-4. Wait for `doculens-backend` to finish deploying and copy its `https://...onrender.com` URL.
-5. In the `doculens-frontend` service's environment, set `NEXT_PUBLIC_API_URL` to the backend URL and save. Because Next.js inlines `NEXT_PUBLIC_*` variables at build time, redeploy the frontend after changing it.
-6. Copy the frontend's `https://...onrender.com` URL. In the backend environment, set `CORS_ORIGINS` to that exact origin (no trailing slash). Multiple origins can be comma-separated.
-7. Redeploy both services so the backend uses the final CORS origin and the frontend is rebuilt with the final API URL.
+   - `NLI_CONFIDENCE_THRESHOLD`: `0.85`.
+   - `RETRIEVAL_TOP_K`: `5`.
+   - `PYTHONUNBUFFERED`: `1`.
+4. Create `doculens-frontend` as a Render Static Site from the Blueprint. Its build command is `npm ci && npm run build`, and its publish directory is `out`.
+5. Set the frontend environment variable `NEXT_PUBLIC_API_URL` to `https://doculens-4.onrender.com` before its first build. This value is already configured in `render.yaml` and `frontend/.env.example`. Because Next.js inlines `NEXT_PUBLIC_*` variables at build time, redeploy the frontend after changing it.
+6. Copy the frontend's deployed `https://...onrender.com` origin and set backend `CORS_ORIGINS` to that exact origin (no trailing slash). Add any additional allowed origins as comma-separated values.
+7. Save and redeploy the backend after setting `CORS_ORIGINS`; redeploy the frontend after changing `NEXT_PUBLIC_API_URL`.
 
 If the NLI model is private, `HF_TOKEN` as a service environment variable makes it available at runtime. To bake the private model into the Docker image as well, add a Render **secret file** named `HF_TOKEN` for the backend build with the same token. The Dockerfile reads it only through a BuildKit secret mount; do not pass the token as a Docker build argument or commit it. Render prompts for `sync: false` values during the initial Blueprint creation; add or update them later in the Dashboard.
+
+## Render Settings to Confirm
+
+- **Frontend Static Site**: build command `npm ci && npm run build`; publish directory `out`; environment variable `NEXT_PUBLIC_API_URL=https://doculens-4.onrender.com`.
+- **Backend Web Service**: environment variable `CORS_ORIGINS=<your exact frontend origin>`; `HF_TOKEN` is optional for the public model and required only for a private model.
+- No frontend start command or `NODE_VERSION` is needed for the static site.
 
 ## Troubleshooting
 
@@ -31,7 +38,8 @@ If the NLI model is private, `HF_TOKEN` as a service environment variable makes 
 
 ## Post-deploy Checks
 
-- Open `https://<backend>.onrender.com/health`; expect `{"status":"ok"}`.
+- Open `https://doculens-4.onrender.com/`; expect `{"service":"DocuLens API","status":"ok","docs":"/docs"}`.
+- Open `https://doculens-4.onrender.com/health`; expect `{"status":"ok"}`.
 - Open the frontend URL and confirm the backend status is online.
 - Upload a small, text-based PDF under the configured size limit and confirm it appears in the document list.
 - Run a semantic search and confirm matching document chunks are returned.

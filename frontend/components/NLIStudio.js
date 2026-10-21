@@ -55,7 +55,7 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
     if (!premise.trim() || !hypothesis.trim()) return;
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
     setAnalyzing(true);
     setError(null);
 
@@ -70,9 +70,14 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
         })
       });
 
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        throw new Error(`The backend returned an unreadable response (HTTP ${res.status}). Please try again.`);
+      }
       if (!res.ok) {
-        throw new Error(data.detail || "Analysis request failed");
+        throw new Error(data.detail || `Analysis request failed (HTTP ${res.status}).`);
       }
 
       setResult(data);
@@ -89,8 +94,10 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
       ]);
     } catch (err) {
       setError(err?.name === "AbortError"
-        ? "Analysis timed out after 3 minutes. Please retry with shorter text."
-        : (err.message || "Failed to run NLI inference"));
+        ? "Analysis timed out after 120 seconds. The server may be waking up or busy; please retry."
+        : (err?.message === "Failed to fetch"
+          ? "Could not reach the backend. It may be waking up; please wait a minute and retry."
+          : (err?.message || "Analysis failed. Please try again.")));
     } finally {
       clearTimeout(timeoutId);
       setAnalyzing(false);
@@ -226,14 +233,14 @@ export default function NLIStudio({ apiUrl, initialPremise = "" }) {
               disabled={analyzing || !premise.trim() || !hypothesis.trim()}
               style={{ minWidth: "160px" }}
             >
-              {analyzing ? "Computing Inference…" : "🧠 Run NLI Inference"}
+              {analyzing ? "Analyzing, this may take a minute..." : "🧠 Run NLI Inference"}
             </button>
           </div>
         </form>
 
         {analyzing && (
           <p role="status" style={{ marginTop: "12px", color: "var(--fg-muted)", fontSize: "0.85rem" }}>
-            CPU analysis is running; this may take a minute.
+            Analyzing, this may take a minute...
           </p>
         )}
 

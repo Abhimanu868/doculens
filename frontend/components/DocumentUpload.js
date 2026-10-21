@@ -39,18 +39,17 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
       return;
     }
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 180000);
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     setUploading(true);
     setError(null);
     setSuccessMsg(null);
-    setUploadProgress("Uploading and processing; this may take a minute…");
+    setUploadProgress("Analyzing, this may take a minute...");
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      setUploadProgress("Extracting text via PyMuPDF and segmenting sentences…");
       const res = await fetch(`${apiUrl}/api/upload`, {
         method: "POST",
         body: formData,
@@ -73,8 +72,10 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
       if (onUploadSuccess) onUploadSuccess(data);
     } catch (err) {
       const message = err?.name === "AbortError"
-        ? "Upload timed out after 3 minutes. Try a smaller PDF or retry when the service is ready."
-        : (err?.message || "Failed to upload document");
+        ? "The upload timed out after 120 seconds. The server may be waking up or busy; please retry."
+        : (err?.message === "Failed to fetch"
+          ? "Could not reach the backend. It may be waking up; please wait a minute and retry."
+          : (err?.message || "Failed to upload document. Please try again."));
       setError(message);
     } finally {
       clearTimeout(timeoutId);
@@ -128,7 +129,7 @@ export default function DocumentUpload({ onUploadSuccess, apiUrl }) {
         {uploading ? (
           <div>
             <div style={{ fontWeight: "600", color: "var(--accent-light)", fontSize: "0.95rem" }}>
-              Processing Pipeline Active
+              Analyzing, this may take a minute...
             </div>
             <div style={{ fontSize: "0.84rem", color: "var(--fg-muted)", marginTop: "6px" }}>
               {uploadProgress}

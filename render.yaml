@@ -25,15 +25,11 @@ services:
 
   - type: web
     name: doculens-frontend
-    runtime: node
+    runtime: static
     rootDir: ./frontend
     buildCommand: npm ci && npm run build
-    startCommand: npm run start
-    plan: free
+    staticPublishPath: ./out
     autoDeployTrigger: commit
     envVars:
-      # NEXT_PUBLIC_API_URL is inlined at build time; redeploy after changing it.
       - key: NEXT_PUBLIC_API_URL
-        sync: false
-      - key: NODE_VERSION
-        value: "20"
+        value: https://doculens-4.onrender.com

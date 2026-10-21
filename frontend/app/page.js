@@ -9,7 +9,7 @@ import SemanticSearch from "../components/SemanticSearch";
 import NLIStudio from "../components/NLIStudio";
 import DocumentModal from "../components/DocumentModal";
 
-const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "https://doculens-4.onrender.com").replace(/\/+$/, "");
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("documents"); // "documents" | "search" | "nli"
